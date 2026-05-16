@@ -23,7 +23,7 @@ Opens fake listeners on ports that attackers love to target — FTP, SSH, Telnet
 
 ![EC2 Instance](screenshots/ec2-instance.png)
 ![Security Group Rules](screenshots/security-group-rules.png)
-![VPC Setup](screenshots/vpc-setup.png)
+![VPC Setup](screenshots/vpc-resource-map.png)
 
 ---
 
