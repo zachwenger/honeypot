@@ -1,13 +1,13 @@
 # ZW Honeypot
 ### by Zach Wenger
 
-A Python honeypot deployed on AWS EC2 that listens on common attack ports and logs real connection attempts from the internet. Built to capture live threat data and understand how attackers actually behave in the wild.
+I built a honeypot in Python and deployed it on AWS EC2 to capture real attack attempts from the internet. The idea was simple — put a fake server online, open up some common ports, and see what shows up. Turns out the answer is: a lot, and fast.
 
 ---
 
 ## What It Does
 
-Spins up fake listeners on high-value ports — SSH, FTP, Telnet, HTTP, HTTPS, RDP — and logs every connection attempt with timestamp, source IP, port, and any data the attacker sends. Deployed on a public AWS EC2 instance so it's reachable by real internet traffic.
+Opens fake listeners on ports that attackers love to target — FTP, SSH, Telnet, HTTP, HTTPS, RDP. Anyone who connects gets logged. Timestamp, IP address, port, and whatever data they sent. That's it. Simple concept, real data.
 
 ---
 
@@ -15,8 +15,8 @@ Spins up fake listeners on high-value ports — SSH, FTP, Telnet, HTTP, HTTPS, R
 
 | Component | Details |
 |---|---|
-| Cloud Provider | AWS EC2 |
-| Instance Type | t2.micro (free tier) |
+| Cloud | AWS EC2 |
+| Instance | t2.micro (free tier) |
 | OS | Ubuntu Server 22.04 LTS |
 | Public IP | 3.93.125.65 |
 | Region | US East (N. Virginia) |
@@ -27,22 +27,22 @@ Spins up fake listeners on high-value ports — SSH, FTP, Telnet, HTTP, HTTPS, R
 
 ---
 
-## Ports Monitored
+## Ports I Monitored
 
-| Port | Service | Why Attackers Target It |
+| Port | Service | Why it gets targeted |
 |---|---|---|
-| 21 | FTP | Old file transfer protocol, often misconfigured |
-| 22 | SSH | Remote access — bots constantly brute force this |
-| 23 | Telnet | Unencrypted remote access, no auth on many IoT devices |
-| 80 | HTTP | Web servers — scanned for known vulnerabilities |
-| 443 | HTTPS | SSL/TLS exploits, web application attacks |
-| 3389 | RDP | Windows remote desktop — ransomware groups love this |
+| 21 | FTP | Old protocol, usually misconfigured |
+| 22 | SSH | Bots brute force this constantly |
+| 23 | Telnet | No encryption, default creds on most IoT devices |
+| 80 | HTTP | Scanned for web vulnerabilities |
+| 443 | HTTPS | SSL exploits, web app attacks |
+| 3389 | RDP | Ransomware groups love hitting this |
 
 ---
 
-## Live Results
+## Results
 
-The honeypot started receiving hits within minutes of going live. No advertising, no sharing the IP — bots found it automatically by scanning the entire internet.
+Got hits within minutes of the instance going live. I didn't share the IP anywhere — bots just found it on their own by scanning the internet.
 
 ![Honeypot Running](screenshots/honeypot-running.png)
 ![Live Hits](screenshots/honeypot-live-hits.png)
@@ -52,7 +52,7 @@ The honeypot started receiving hits within minutes of going live. No advertising
 
 ## Captured Connections
 
-| # | Timestamp | Port | Service | Source IP | Data Sent |
+| # | Time | Port | Service | IP | Data |
 |---|---|---|---|---|---|
 | 1 | 2026-05-16 01:18:58 | 23 | Telnet | 177.245.231.248 | None |
 | 2 | 2026-05-16 01:19:16 | 23 | Telnet | 77.236.93.44 | None |
@@ -63,28 +63,26 @@ The honeypot started receiving hits within minutes of going live. No advertising
 
 ## Threat Analysis
 
-### Attack Patterns
+**Telnet hits (1, 2, 4)**
 
-**Telnet scanning (Hits 1, 2, 4)**
-Three separate IPs probed port 23 (Telnet) within the first 21 minutes. This is classic automated scanning — bots sweep the entire IPv4 address space looking for open Telnet ports. Telnet is unencrypted and commonly left open on IoT devices, routers, and legacy systems. Once found, attackers attempt default credential logins to gain control of the device. This is how botnets like Mirai recruited millions of IoT devices.
+Three different IPs hit port 23 in the first 21 minutes. This is textbook automated scanning — bots sweep the entire internet looking for open Telnet ports. When they find one, they try default credentials to take over the device. This is exactly how the Mirai botnet built an army of millions of compromised IoT devices. Seeing that same pattern show up on my honeypot within minutes of going live made that feel very real.
 
-**HTTPS exploit attempt (Hit 3)**
-The most interesting hit. IP 106.54.27.68 connected to port 443 and immediately sent raw binary data — not a normal HTTPS handshake. The payload contains non-printable characters consistent with a crafted exploit payload, likely probing for SSL/TLS vulnerabilities or attempting to fingerprint the service. This behavior is typical of automated vulnerability scanners looking for CVEs in web server software.
+**HTTPS exploit attempt (hit 3)**
 
-### Key Findings
+This one was interesting. IP 106.54.27.68 connected to port 443 and immediately sent raw binary data — not a normal HTTPS handshake. The payload had non-printable characters which is a sign of a crafted exploit, probably scanning for known SSL/TLS vulnerabilities. This isn't someone manually typing — it's an automated scanner running 24/7 looking for anything it can exploit.
 
-- **Time to first hit: under 1 minute** — the internet is actively scanning every public IP constantly
-- **Most targeted port: Telnet (23)** — 3 out of 4 hits, consistent with IoT botnet recruitment activity
-- **One attacker sent actual exploit data** — not just a probe, an active exploitation attempt
-- **All hits were automated** — no human is manually scanning, these are bots running 24/7
+**What stands out**
 
-### What This Tells Us
+- First hit came in under a minute of going live
+- 3 out of 4 hits were Telnet — IoT botnet activity
+- One attacker actually sent exploit data, not just a connection probe
+- None of this was human — all automated bots
 
-This data illustrates why exposed services are dangerous. A real server running Telnet on port 23 would have received brute force login attempts within seconds. The HTTPS payload hit shows that attackers don't just knock on the door — they immediately try to break it down with known exploits.
+The main thing this showed me is that any exposed service gets found fast. A real Telnet server would have been getting brute forced within seconds of coming online.
 
 ---
 
-## How to Run It Yourself
+## Run It Yourself
 
 ```bash
 git clone https://github.com/zachwenger/honeypot.git
@@ -92,31 +90,31 @@ cd honeypot
 sudo python3 honeypot.py
 ```
 
-Run as root/sudo — ports below 1024 require elevated privileges.
+Needs sudo — ports under 1024 require root.
 
 ---
 
-## Tech Stack
+## Stack
 
 - Python 3
 - `socket` — port listeners
-- `threading` — concurrent port monitoring
-- `logging` — persistent log files
-- `colorama` — terminal output
+- `threading` — runs all ports at the same time
+- `logging` — saves everything to a log file
+- `colorama` — terminal output formatting
 - AWS EC2 — cloud deployment
 
 ---
 
 ## What I Learned
 
-The biggest takeaway was how fast the hits came in. Within minutes of a public IP going live, bots were already probing it. This isn't theoretical — it's the actual internet threat landscape running 24/7.
+Honestly the speed was the thing that got me. I spun up the instance, got everything running, and within a minute something was already knocking on port 23. The internet is constantly being scanned by automated bots and you don't have to do anything to get found.
 
-The Telnet hits make sense when you understand the Mirai botnet — it spreads by scanning for open port 23 and trying default credentials. Seeing that same pattern hit my honeypot within minutes of launch made that very real.
+The Mirai botnet thing clicked for me here. I'd read about how it infected millions of IoT devices through Telnet with default credentials. Seeing that exact behavior show up on my own honeypot made it go from a textbook concept to something I actually understood.
 
-The HTTPS payload hit was the most eye-opening. Whoever or whatever sent that wasn't just checking if port 443 was open — it sent crafted binary data immediately. That's an automated exploit scanner doing what it's built to do.
+The HTTPS payload hit was the most interesting part. That wasn't just a ping — something sent crafted binary data trying to exploit whatever was running on 443. That's a real threat actor behavior pattern, not just curiosity.
 
-Running this on AWS also taught me how cloud networking actually works — VPCs, subnets, internet gateways, security groups, Elastic IPs. Setting all that up manually made it click in a way that just reading about it never would.
+Also learned a ton about AWS networking setting this up — VPCs, subnets, internet gateways, Elastic IPs, security groups. Had to configure all of it from scratch which made cloud infrastructure actually make sense.
 
 ---
 
-*Deployed on AWS EC2 for educational purposes. All data captured is from unsolicited inbound connections to a public IP.*
+*All traffic captured was unsolicited. Deployed on my own AWS instance for learning purposes.*
