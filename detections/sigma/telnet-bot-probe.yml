@@ -1,0 +1,32 @@
+title: Inbound Telnet Connection from Internet (Mirai-class)
+id: 7b1f3c5d-4a8e-4d92-8b21-9c2f6d8a1e4b
+status: experimental
+description: >
+  Any inbound TCP connection to port 23 from a non-RFC1918 source is
+  suspicious in 2026 — legitimate Telnet usage is functionally extinct.
+  Correlates with Mirai/Hajime/Mozi botnet scanning behavior captured
+  on a public-internet honeypot (see repo README for raw evidence).
+author: Zach Wenger
+date: 2026/05/16
+references:
+  - https://attack.mitre.org/techniques/T1110/001/
+  - https://attack.mitre.org/techniques/T1078/001/
+  - https://krebsonsecurity.com/tag/mirai-botnet/
+logsource:
+  category: firewall
+detection:
+  selection:
+    dst_port: 23
+    src_ip|cidr|not:
+      - '10.0.0.0/8'
+      - '172.16.0.0/12'
+      - '192.168.0.0/16'
+      - '127.0.0.0/8'
+  condition: selection
+falsepositives:
+  - Internal admins using Telnet for legacy hardware (rare; document the exception per host)
+level: medium
+tags:
+  - attack.initial_access
+  - attack.t1110.001
+  - attack.t1078.001

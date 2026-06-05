@@ -1,0 +1,27 @@
+title: HTTPS Port Receives Non-TLS Binary Payload
+id: 9a4d2e8f-1c7b-4f6a-b3e5-2d9f8c1a7e6b
+status: experimental
+description: >
+  TCP traffic to 443 that doesn't begin with a TLS ClientHello (first
+  byte 0x16 record type) on a server expecting TLS is consistent with
+  vulnerability scanners probing for non-TLS responses or exploiting
+  pre-handshake parsing bugs. Observed on a public-internet honeypot
+  (see repo README for raw evidence).
+author: Zach Wenger
+date: 2026/05/16
+references:
+  - https://attack.mitre.org/techniques/T1595/002/
+logsource:
+  category: network_connection
+detection:
+  selection:
+    dst_port: 443
+    payload_first_byte|not: '0x16'
+    payload_bytes|gte: 4
+  condition: selection
+falsepositives:
+  - Misconfigured clients sending HTTP to HTTPS port (will start with 0x47 'GET' — exclude if needed)
+level: medium
+tags:
+  - attack.reconnaissance
+  - attack.t1595.002
